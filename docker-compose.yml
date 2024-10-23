@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: zookeeper:3.7.0
+    restart: always
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    volumes:
+    - /pt/senforfire/zookeeper-data:/data
+    - /pt/senforfire/zookeeper-datalog:/datalog
+
+  kafka:
+    image: wurstmeister/kafka
+    restart: always
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"  # Porta 9093 para conexões externas (fora do Docker)
+    depends_on:
+      - zookeeper  
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_EXTERNAL://localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_EXTERNAL://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CONFLUENT_METRICS_ENABLE: 'true'
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - /pt/senforfire/kafka-data:/var/lib/kafka/data
+
+  mqtt-broker:
+    image: eclipse-mosquitto
+    restart: always
+    container_name: mqtt-broker
+    ports:
+      - "1883:1883"  # Porta MQTT não segura
+      - "8883:8883"  # Porta MQTT segura (SSL/TLS)
+    volumes:
+      - /pt/senforfire/mosquitto-data:/mosquitto/data
+      - /pt/senforfire/mosquitto-log:/mosquitto/log
+      - /pt/senforfire/files/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - /etc/letsencrypt/live/senforfire.xdi.uevora.pt:/etc/letsencrypt/live/senforfire.xdi.uevora.pt:ro  # Montar os certificados Let's Encrypt no container
+      - /etc/letsencrypt/archive/senforfire.xdi.uevora.pt:/etc/letsencrypt/archive/senforfire.xdi.uevora.pt:ro
+      - /pt/senforfire/mosquitto-data/password_file:/mosquitto/data/password_file:ro 
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    restart: always
+    container_name: kafka-ui
+    ports:
+      - "8090:8080"
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      
+  timescaledb:
+    image: timescale/timescaledb-ha:pg16
+    restart: always
+    container_name: timescaledb
+    ports:
+      - "5432:5432"
+    environment:
+      - PGDATA=/var/lib/postgresql/data
+      - POSTGRES_DB=senforfire
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - /pt/senforfire/timescaledb-data:/var/lib/postgresql/data
+      
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    restart: always
+    container_name: schema-registry
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.0.1
+    restart: always
+    container_name: kafka-connect
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kafka
+      - zookeeper
+      - timescaledb
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: "kafka-connect-group"
+      CONNECT_CONFIG_STORAGE_TOPIC: "connect-configs"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_TOPIC: "connect-offsets"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_TOPIC: "connect-statuses"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=WARN"
+      CONNECT_JDBC_URL: "jdbc:postgresql://timescaledb:5432/senforfire"
+      CONNECT_JDBC_USER: "postgres"
+      CONNECT_JDBC_PASSWORD: "password"
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/etc/kafka-connect/jars"
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/dev/null -Djavax.security.auth.useSubjectCredsOnly=false"
+      CONNECT_LOG4J_ROOT_LOGLEVEL: "ERROR"
+      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=ERROR,org.reflections=ERROR"
+
+    
+    volumes:
+      - ./kafka-connect-plugins:/etc/kafka-connect/jars
+      - ./configure_kafka_connect.sh:/usr/local/bin/configure_kafka_connect.sh
+      - ./kafka-connect-jdbc:/usr/share/java/kafka-connect-jdbc
+      - ./kafka-connect-plugins/schema.json:/usr/share/java/schema.json
+    command: "sh -c 'confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.0.0 && /etc/confluent/docker/run'"
+   
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer 
+      - GF_AUTH_ANONYMOUS_ORG_NAME=MainOrg  
+    volumes:
+      - /pt/senforfire/grafana-data:/var/lib/grafana
+    depends_on:
+      - timescaledb
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    restart: always
+    ports:
+      - "3001:8080"  
+    volumes:
+      - ./swagger/swagger.yaml:/etc/swagger/swagger.yaml
+      - ./kafka-connect-plugins/schema.json:/usr/share/nginx/html/schema.json
+    environment:
+      SWAGGER_JSON: /etc/swagger/swagger.yaml
