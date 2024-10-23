@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "WeatherAirObservation",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the observation."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["WeatherAirObservation"],
+      "description": "Defines the type of the observation."
+    },
+    "address": {
+      "type": "object",
+      "properties": {
+        "addressCountry": {
+          "type": "string",
+          "description": "Country of the observation."
+        },
+        "addressLocality": {
+          "type": "string",
+          "description": "Locality of the observation."
+        }
+      },
+      "required": ["addressCountry", "addressLocality"],
+      "description": "Address related to the observation location."
+    },
+    "dateObserved": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The date and time the observation was made."
+    },
+    "temperature": {
+      "type": "number",
+      "description": "Temperature in degrees Celsius."
+    },
+    "humidity": {
+      "type": "number",
+      "description": "Humidity percentage."
+    },
+    "pressure": {
+      "type": "number",
+      "description": "Atmospheric pressure in hPa."
+    },
+    "airQualityIndex": {
+      "type": "number",
+      "description": "Air Quality Index value."
+    },
+    "CO2": {
+      "type": "number",
+      "description": "Concentration of CO2 in ppm."
+    },
+    "NO2": {
+      "type": "number",
+      "description": "Concentration of NO2 in µg/m³."
+    },
+    "PM10": {
+      "type": "number",
+      "description": "Concentration of PM10 particles in µg/m³."
+    }
+  },
+  "required": ["id", "type", "address", "dateObserved"],
+  "description": "Schema for an observation that includes both weather and air quality data."
+}

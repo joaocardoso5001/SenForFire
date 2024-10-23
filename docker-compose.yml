@@ -124,7 +124,7 @@ services:
     volumes:
       - ./kafka-connect-plugins:/etc/kafka-connect/jars
       - ./configure_kafka_connect.sh:/usr/local/bin/configure_kafka_connect.sh
-      - ./kafka-connect-jdbc:/usr/share/java/kafka-connect-jdbc
+      - ./kafka-connect-plugins/kafka-connect-jdbc:/usr/share/java/kafka-connect-jdbc
       - ./kafka-connect-plugins/schema.json:/usr/share/java/schema.json
     command: "sh -c 'confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.0.0 && /etc/confluent/docker/run'"
    

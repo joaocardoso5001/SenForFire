@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ForestFireObservation",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["ForestFireObservation"],
+      "description": "Defines the type of the observation."
+    },
+    "location": {
+      "type": "object",
+      "description": "GeoJSON reference to the item. It can be Point.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["Point"],
+          "description": "GeoJSON Point type."
+        },
+        "coordinates": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Array of [longitude, latitude] coordinates."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the location, such as locality or region."
+        }
+      },
+      "required": ["type", "coordinates"]
+    },
+    "dateObserved": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The date and time the observation was made."
+    },
+    "deviceId": {
+      "type": "string",
+      "description": "Sensor ID."
+    },
+    "source": {
+      "type": "string",
+      "description": "Source of the observation data."
+    },
+    "temperature": {
+      "type": "number",
+      "description": "Temperature in degrees Celsius."
+    },
+    "humidity": {
+      "type": "number",
+      "description": "Relative humidity percentage."
+    },
+    "windSpeed": {
+      "type": "number",
+      "description": "Wind speed in meters per second (m/s)."
+    },
+    "CO": {
+      "type": "number",
+      "description": "Concentration of CO (carbon monoxide) in µg/m³."
+    },
+    "CO2": {
+      "type": "number",
+      "description": "Concentration of CO2 (carbon dioxide) in ppm."
+    },
+    "NO": {
+      "type": "number",
+      "description": "Concentration of NO (nitric oxide) in µg/m³."
+    },
+    "NO2": {
+      "type": "number",
+      "description": "Concentration of NO2 (nitrogen dioxide) in µg/m³."
+    },
+    "O3": {
+      "type": "number",
+      "description": "Concentration of O3 (ozone) in µg/m³."
+    },
+    "CH4": {
+      "type": "number",
+      "description": "Concentration of CH4 (methane) in ppm."
+    },
+    "H2": {
+      "type": "number",
+      "description": "Concentration of H2 (hydrogen) in ppm."
+    },
+    "PM10": {
+      "type": "number",
+      "description": "Concentration of PM10 particles in µg/m³."
+    },
+    "PM2.5": {
+      "type": "number",
+      "description": "Concentration of PM2.5 particles in µg/m³."
+    },
+     "MICS_2714_OX": {
+      "type": "number",
+      "description": "Measurement of oxidizing gases using MICS 2714 sensor."
+    },
+    "MICS_4514_RED": {
+      "type": "number",
+      "description": "Measurement of reducing gases using MICS 4514 sensor."
+    },
+    "MICS_4514_OX": {
+      "type": "number",
+      "description": "Measurement of oxidizing gases using MICS 4514 sensor."
+    },
+    "MICS_6814_RED": {
+      "type": "number",
+      "description": "Measurement of reducing gases using MICS 6814 sensor."
+    },
+    "MICS_6814_OX": {
+      "type": "number",
+      "description": "Measurement of oxidizing gases using MICS 6814 sensor."
+    },
+    "MICS_6814_NH3": {
+      "type": "number",
+      "description": "Measurement of ammonia using MICS 6814 sensor."
+    },
+    "NH3": {
+      "type": "number",
+      "description": "Concentration of NH3 (ammonia) in ppm."
+    },
+    "SP3_61_OZONE": {
+      "type": "number",
+      "description": "Measurement of ozone using SP3_61 sensor."
+    }
+  },
+  "required": ["type", "dateObserved", "deviceId", "source"],
+  "description": "Schema for forest fire observations based on weather and air quality data, tailored to prevention, early detection, and monitoring."
+}
